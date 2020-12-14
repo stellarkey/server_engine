@@ -1,5 +1,5 @@
 // 测试查询链接：
-// http://localhost:8011/qqshare_search?filename=%E7%BB%84%E5%90%88%E6%95%B0%E5%AD%A6&course=%E7%BB%84%E5%90%88%E6%95%B0%E5%AD%A6&teacher=%E9%A9%AC%E6%98%B1%E6%98%A5
+// http://localhost:8011/api/search?filename=%E7%BB%84%E5%90%88%E6%95%B0%E5%AD%A6&course=%E7%BB%84%E5%90%88%E6%95%B0%E5%AD%A6&teacher=%E9%A9%AC%E6%98%B1%E6%98%A5
 // 测试插入链接：（自行）
 
 // 命令行：node server.js --port=8023  可自定义端口
@@ -9,7 +9,7 @@ var port_number= args['port'] ? args['port'] : 8011; // 端口号
 var express = require('express');
 var app = express();
  
-app.get('/qqshare_search', function (req, res) {
+app.get('/api/search', function (req, res) {
 
   console.log(req.query);
   //console.log(req.query.filename);
@@ -52,7 +52,7 @@ app.get('/qqshare_search', function (req, res) {
 
 // magnetURL中有特殊字符，可能需要转义：
 // https://segmentfault.com/a/1190000009492789
-app.get('/qqshare_upload', function (req, res) {
+app.get('/api/upload', function (req, res) {
   var mysql      = require('mysql');
   var connection = mysql.createConnection({
     host     : 'localhost',
@@ -60,10 +60,10 @@ app.get('/qqshare_upload', function (req, res) {
     password : '123456',
     database : 'qqshare'
   });
-  
+
   connection.connect();
 
-  var filename = req.query.filename ? req.query.filename : " ";
+  var filename = req.query.filename ? req.body.filename : " ";
   var course = req.query.course ? req.query.course : " ";
   var teacher = req.query.teacher ? req.query.teacher : " ";
   var filesize = req.query.filesize ? req.query.filesize : 1024;
@@ -99,6 +99,14 @@ app.get('/qqshare_upload', function (req, res) {
   });
 
   connection.end();
+})
+
+app.post('/api/uservalid', function (req, res) {
+  console.log("主页 POST 请求");
+  console.log(req);
+  res.send("QAQ");
+  console.log("-------------");
+  
 })
 
 
