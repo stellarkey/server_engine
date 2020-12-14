@@ -6,7 +6,8 @@
   "dependencies": {
     "express": "^4.17.1",
     "minimist": "^1.2.5",
-    "mysql": "^2.18.1"
+    "mysql": "^2.18.1",
+    "querystring": "^0.2.0"
   },
   "devDependencies": {},
   "scripts": {

@@ -7,6 +7,7 @@ const args = require('minimist')(process.argv.slice(2));
 var port_number= args['port'] ? args['port'] : 8011; // 端口号
 
 var express = require('express');
+var querystring = require('querystring');
 var app = express();
  
 app.get('/api/search', function (req, res) {
@@ -52,7 +53,25 @@ app.get('/api/search', function (req, res) {
 
 // magnetURL中有特殊字符，可能需要转义：
 // https://segmentfault.com/a/1190000009492789
-app.get('/api/upload', function (req, res) {
+app.post('/api/upload', function (req, res) {
+  
+
+  var postData = "";
+  req.on("data", (chunk) => {
+  postData = postData + chunk;
+  });
+  req.on("end", () => {
+  postData = querystring.parse(postData);
+
+  var filename = postData.filename;
+  var course = postData.course;
+  var teacher = postData.teacher;
+  var downloadtime = 0;
+  var filesize = postData.filesize;
+  var uploadtime = getCurrDate();
+  var fileformat = postData.fileformat;
+  var magnetURL = postData.magnetURL;
+
   var mysql      = require('mysql');
   var connection = mysql.createConnection({
     host     : 'localhost',
@@ -63,16 +82,8 @@ app.get('/api/upload', function (req, res) {
 
   connection.connect();
 
-  var filename = req.query.filename ? req.body.filename : " ";
-  var course = req.query.course ? req.query.course : " ";
-  var teacher = req.query.teacher ? req.query.teacher : " ";
-  var filesize = req.query.filesize ? req.query.filesize : 1024;
-  var uploadtime = req.query.uploadtime ? req.query.uploadtime : " ";
-  var fileformat = req.query.fileformat ? req.query.fileformat : " ";
-  var magnetURL = req.query.magnetURL ? req.query.magnetURL : " ";
-
-  var addSql = 'INSERT INTO qqshare_info (filename,course,teacher,filesize,uploadtime,fileformat,magnetURL) VALUES(?,?,?,?,?,?,?)';
-  var addSqlParams = [filename,course,teacher,filesize,uploadtime,fileformat,magnetURL];
+  var addSql = 'INSERT INTO qqshare_info (filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL) VALUES(?,?,?,?,?,?,?)';
+  var addSqlParams = [filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL];
 
   connection.query(addSql,addSqlParams,function (err, result) {
     if(err){
@@ -102,13 +113,52 @@ app.get('/api/upload', function (req, res) {
 })
 
 app.post('/api/uservalid', function (req, res) {
-  console.log("主页 POST 请求");
-  console.log(req);
-  res.send("QAQ");
+  console.log('post');
+  var postData = "";
+  req.on("data", (chunk) => {
+  postData = postData + chunk;
+  });
+  req.on("end", () => {
+  postData = querystring.parse(postData);
+  //console.log(postData);
+  console.log(postData['id'],postData['pwd']);
+  db = [[2020210942,{pwd:123456,name:'zouyansong'}],
+    [2020000000,{pwd:123456,name:'robot'}],
+    [123,{pwd:123,name:'test'}]];
+  var map = new Map(db);
+  var resData = undefined;
+  var v = map.get(Number(postData['id']));
+  if(v){
+    console.log("用户存在");
+    if (v['pwd'] === Number(postData['pwd'])){
+    console.log("密码正确");
+    resData = [{flag:1,name:v['name']}];
+    }
+    else{
+    console.log("密码错误");
+    resData = [{flag:2}];
+    }
+  }
+  else{
+    console.log("用户不存在");
+    resData = [{flag:3}];
+  }
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(resData));
+    });
+  });
+
   console.log("-------------");
   
 })
 
+
+app.get('/api/test', function (req, res) {
+
+  console.log(getCurrDate());
+  res.send(getCurrDate());
+  
+})
 
 
 
@@ -120,3 +170,21 @@ var server = app.listen(port_number, function () {
   console.log("QQShare is running at http://%s:%s", host, port)
  
 })
+
+
+// https://blog.csdn.net/itmyhome1990/article/details/89372292
+function getCurrDate() {
+	var date = new Date();
+	var sep = "-";
+	var year = date.getFullYear(); //获取完整的年份(4位)
+	var month = date.getMonth() + 1; //获取当前月份(0-11,0代表1月)
+	var day = date.getDate(); //获取当前日
+	if (month <= 9) {
+		month = "0" + month;
+	}
+	if (day <= 9) {
+		day = "0" + day;
+	}
+	var currentdate = year + sep + month + sep + day;
+	return currentdate;
+}
