@@ -12,7 +12,8 @@ var app = express();
  
 app.get('/api/search', function (req, res) {
 
-  console.log(req.query);
+  console.log("----------------------------------------");
+  console.log("req.query: ", req.query);
   //console.log(req.query.filename);
   //res.send(req.query.filename);
 
@@ -41,9 +42,13 @@ app.get('/api/search', function (req, res) {
 
   connection.query(SQL_query, function (error, results, fields) {
     if (error) throw error;
-    console.log(results);
+    //console.log(results);
     //console.log('The solution is: ', results[0].filename);
-    res.send(results);
+    
+    res.setHeader("Content-Type", "application/json");
+    console.log("----------------------------------------");
+    console.log(JSON.stringify(results));
+    res.end(JSON.stringify(results));
   });
 
   connection.end();
@@ -71,6 +76,8 @@ app.post('/api/upload', function (req, res) {
   var uploadtime = getCurrDate();
   var fileformat = postData.fileformat;
   var magnetURL = postData.magnetURL;
+  console.log(magnetURL.length);
+  console.log("-----------------------------------");
 
   var mysql      = require('mysql');
   var connection = mysql.createConnection({
@@ -82,20 +89,25 @@ app.post('/api/upload', function (req, res) {
 
   connection.connect();
 
-  var addSql = 'INSERT INTO qqshare_info (filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL) VALUES(?,?,?,?,?,?,?)';
+  var addSql = 'INSERT INTO qqshare_info (filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL) VALUES(?,?,?,?,?,?,?,?)';
   var addSqlParams = [filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL];
 
   connection.query(addSql,addSqlParams,function (err, result) {
     if(err){
-    console.log('[INSERT ERROR] - ',err.message);
-    return;
+      console.log('[INSERT ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
     }
 
     console.log('--------------------------INSERT----------------------------');
     //console.log('INSERT ID:',result.insertId);        
     console.log('INSERT ID:',result);        
     console.log('-----------------------------------------------------------------\n\n');
-    res.send(result);
+    resData = {flag: 1};
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
   });
 
   connection.query("SELECT * FROM qqshare_info;",function (err, result) {
