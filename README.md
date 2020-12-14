@@ -1,6 +1,8 @@
 # server_search_engine
  server_search_engine for `qqshare`.
 
+> MySQL pre-installation is required.
+
 # Usage
 
 ```
