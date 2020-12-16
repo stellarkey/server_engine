@@ -10,7 +10,83 @@ var express = require('express');
 var querystring = require('querystring');
 var app = express();
  
+
+
+app.post('/api/uservalid', function (req, res) {
+  console.log("----------------------------------------");
+  console.log('/api/uservalid');
+  var postData = "";
+  req.on("data", (chunk) => {
+    postData = postData + chunk;
+  });
+  req.on("end", () => {
+    postData = querystring.parse(postData);    
+    db = [[2020210942,{pwd:123456,name:'zouyansong'}],
+      [2020000000,{pwd:123456,name:'robot'}],
+      [123,{pwd:123,name:'test'}]];
+    var map = new Map(db);
+    var resData = undefined;
+    var v = map.get(Number(postData['id']));
+    console.log("----------------------------------------");
+    console.log(postData['id'],postData['pwd']);
+    if(v){
+      console.log("用户存在");
+      if (v['pwd'] === Number(postData['pwd'])){
+        console.log("密码正确");
+        resData = {flag:1,name:v['name']};
+      }
+      else{
+        console.log("密码错误");
+        resData = {flag:2};
+      }
+    }
+    else{
+      console.log("用户不存在");
+      resData = {flag:3};
+    }
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
+  });
+})
+
+app.get('/api/hotfile', function (req, res){
+  console.log("----------------------------------------");
+  console.log('/api/hotfile');
+  // 暂时设计为选择【所有时间中下载量最高的10个文件】
+  // 如果需要获得近期的热门文件，可能需要维护一个定期更新的下载量数组，然后循环更新，暂时搁置
+  var mysql      = require('mysql');
+  var connection = mysql.createConnection({
+    host     : 'localhost',
+    user     : 'root',
+    password : '123456',
+    database : 'qqshare'
+  });
+
+  connection.connect();
+
+  var SQL_query = 'SELECT filename,description FROM qqshare_info ORDER BY downloadtime DESC LIMIT 10;';
+
+  connection.query(SQL_query, function (err, results, fields) {
+    if(err){
+      console.log('[SELECT ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+    
+    res.setHeader("Content-Type", "application/json");
+    console.log("----------------------------------------");
+    console.log(JSON.stringify(results));
+    res.end(JSON.stringify(results));
+  });
+
+  connection.end();
+})
+
 app.get('/api/search', function (req, res) {
+  console.log("----------------------------------------");
+  console.log('/api/search');
 
   console.log("----------------------------------------");
   console.log("req.query: ", req.query);
@@ -40,8 +116,14 @@ app.get('/api/search', function (req, res) {
               + teacher_filter
               + '";';
 
-  connection.query(SQL_query, function (error, results, fields) {
-    if (error) throw error;
+  connection.query(SQL_query, function (err, results, fields) {
+    if(err){
+      console.log('[SELECT ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
     //console.log(results);
     //console.log('The solution is: ', results[0].filename);
     
@@ -54,20 +136,23 @@ app.get('/api/search', function (req, res) {
   connection.end();
 })
 
-
-
-// magnetURL中有特殊字符，可能需要转义：
-// https://segmentfault.com/a/1190000009492789
 app.post('/api/upload', function (req, res) {
-  
-
+  console.log("----------------------------------------");
+  console.log('/api/upload');
+  // magnetURI中有特殊字符，可能需要转义：
+  // https://segmentfault.com/a/1190000009492789
   var postData = "";
   req.on("data", (chunk) => {
-  postData = postData + chunk;
+    postData = postData + chunk;
   });
   req.on("end", () => {
-  postData = querystring.parse(postData);
+    postData = querystring.parse(postData);
+  });
 
+  console.log("----------------------------------------");
+  console.log('postData:',postData);
+
+  // 在文件数据表中加入该文件
   var filename = postData.filename;
   var course = postData.course;
   var teacher = postData.teacher;
@@ -75,9 +160,322 @@ app.post('/api/upload', function (req, res) {
   var filesize = postData.filesize;
   var uploadtime = getCurrDate();
   var fileformat = postData.fileformat;
-  var magnetURL = postData.magnetURL;
-  console.log(magnetURL.length);
-  console.log("-----------------------------------");
+  var description = postData.description;
+  var magnetURI = postData.magnetURI;
+  
+  console.log("---------------------");
+  console.log("magnetURI.length", magnetURI.length);
+
+  var mysql      = require('mysql');
+  var connection = mysql.createConnection({
+    host     : 'localhost',
+    user     : 'root',
+    password : '123456',
+    database : 'qqshare'
+  });
+  
+  connection.connect();
+
+  var addSql = 'INSERT INTO qqshare_info (filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURI,description) VALUES(?,?,?,?,?,?,?,?,?)';
+  var addSqlParams = [filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURI,description];
+
+  connection.query(addSql,addSqlParams,function (err, result) {
+    if(err){
+      console.log('[INSERT ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+
+    console.log('--------------INSERT----------------');
+    //console.log('INSERT ID:',result.insertId);        
+    console.log('INSERT ID:',result);        
+     
+    // resData = {flag: 1};
+    // res.setHeader("Content-Type", "application/json");
+    // res.end(JSON.stringify(resData));
+  });
+
+  // connection.query("SELECT * FROM qqshare_info;",function (err, result) {
+  //   if(err){
+  //     console.log('[SELECT ERROR] - ',err.message);
+  //     return;
+  //   }
+  // });
+
+
+
+
+  // 在用户数据表中更新用户的历史上传记录
+  // 为避免多次重传，这部分放在后，只有在成功插入文件数据库后才可能执行
+  var id = postData.id;
+
+  // UPDATE user_info SET uploadrecord=concat(uploadrecord,',magnet:?fake') WHERE id='123';
+  var addSql = 'UPDATE user_info SET uploadrecord=concat(uploadrecord,\',?\') WHERE id=\'?\';';
+  var addSqlParams = [magnetURI,id];
+
+  connection.query(addSql,addSqlParams,function (err, result) {
+    if(err){
+      console.log('[UPDATE ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+    console.log('--------------------------UPDATE----------------------------');    
+     
+    resData = {flag: 1};
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
+  });
+  
+  connection.end();
+})
+
+app.get('/api/uploadrecord', function (req, res){
+  console.log("----------------------------------------");
+  console.log('/api/uploadrecord');
+  console.log("req.query: ", req.query);
+
+  if(req.query.id == ''){   // 空查询处理
+    console.log("查询为空，失败。");
+    resData = {flag: 0};
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
+    return;
+  }
+
+  var mysql      = require('mysql');
+  var connection = mysql.createConnection({
+    host     : 'localhost',
+    user     : 'root',
+    password : '123456',
+    database : 'qqshare'
+  });
+
+  connection.connect();
+  
+  var SQL_query = 'SELECT uploadrecord FROM user_info WHERE id=\''
+              + req.query.id + '\';';
+
+  connection.query(SQL_query, function (err, results, fields) {
+    if(err){
+      console.log('[SELECT ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+    
+    var uploadrecord = results[0].uploadrecord;
+    console.log("uploadrecord: ", uploadrecord);
+    if(uploadrecord == ""){
+      // 当没有下载过文件时返回[]
+      resData = [];
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+
+    var upload_magnet_list = uploadrecord.split(',')
+                              .filter(function (el) { return el != ''; });    // 清洗
+    console.log("upload_magnet_list: ", upload_magnet_list);
+
+    upload_magnet_list.forEach(element => {
+      "\'" + element + "\'"
+    });
+    console.log("upload_magnet_list: ", upload_magnet_list);
+
+    uploadrecord = upload_magnet_list.join(",");
+    console.log("uploadrecord: ", uploadrecord);
+
+    var SELECT_query = 'SELECT filename,downloadtime,uploadtime FROM qqshare_info WEHER magnetURI IN ('
+            + uploadrecord + ');';
+    connection.query(SELECT_query, function (err, results, fields) { 
+      if(err){
+        console.log('[SELECT ERROR] - ',err.message);
+        resData = {flag: 0};
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(resData));
+        return;
+      }
+
+      res.setHeader("Content-Type", "application/json");
+      console.log("----------------------------------------");
+      console.log(JSON.stringify(results));
+      res.end(JSON.stringify(results));
+    })
+  });
+
+  connection.end();
+})
+
+app.post('/api/download', function (req, res){
+  console.log("----------------------------------------");
+  console.log('/api/download');
+  var postData = "";
+  req.on("data", (chunk) => {
+    postData = postData + chunk;
+  });
+  req.on("end", () => {
+    postData = querystring.parse(postData);
+  });
+
+  console.log("----------------------------------------");
+  console.log('postData:', postData);
+
+  // 在文件数据表给该文件的downloadtime加一
+  var magnetURI = postData.magnetURI;
+
+  var mysql      = require('mysql');
+  var connection = mysql.createConnection({
+    host     : 'localhost',
+    user     : 'root',
+    password : '123456',
+    database : 'qqshare'
+  });
+  
+  connection.connect();
+
+  var addSql1 = 'UPDATE qqshare_info SET downloadtime=downloadtime+1 WHERE magnetURI=\'?\';';
+  var addSql1Params = [magnetURI];
+
+  connection.query(addSql1,addSql1Params,function (err, result) {
+    if(err){
+      console.log('[UPDATE ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+    console.log('----------------UPDATE1----------------');
+    
+    console.log('SQL:', addSql1);
+    // resData = {flag: 1};
+    // res.setHeader("Content-Type", "application/json");
+    // res.end(JSON.stringify(resData));
+  });
+
+
+
+  // 在用户数据表中把该文件的加入到用户的历史下载记录中
+  var id = postData.id;
+
+  // UPDATE user_info SET downloadrecord=concat(downloadrecord,',magnet:?fake') WHERE id='123';
+  var addSql = 'UPDATE user_info SET downloadrecord=concat(downloadrecord,\',?\') WHERE id=\'?\';';
+  var addSqlParams = [magnetURI,id];
+
+  connection.query(addSql,addSqlParams,function (err, result) {
+    if(err){
+      console.log('[UPDATE ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+    console.log('----------------UPDATE2----------------');
+    console.log('SQL:', addSql);
+    resData = {flag: 1};
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
+  });
+  
+
+  connection.end();
+})
+
+app.get('/api/downloadrecord', function (req, res){
+  console.log("----------------------------------------");
+  console.log('/api/downloadrecord');
+  console.log("req.query: ", req.query);
+
+  if(req.query.id == ''){   // 空查询处理
+    resData = {flag: 0};
+    console.log("查询为空，失败。");
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
+    return;
+  }
+  
+  var mysql      = require('mysql');
+  var connection = mysql.createConnection({
+    host     : 'localhost',
+    user     : 'root',
+    password : '123456',
+    database : 'qqshare'
+  });
+
+  connection.connect();
+  
+  var SQL_query = 'SELECT downloadrecord FROM user_info WHERE id=\''
+              + req.query.id + '\';';
+
+  connection.query(SQL_query, function (err, results, fields) {
+    if(err){
+      console.log('[SELECT ERROR] - ',err.message);
+      resData = {flag: 0};
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+    
+    var downloadrecord = results[0].downloadrecord;
+    console.log("downloadrecord: ", downloadrecord);
+    if(downloadrecord == ""){
+      // 当没有下载过文件时返回[]
+      resData = [];
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(resData));
+      return;
+    }
+
+    var download_magnet_list = downloadrecord.split(',')
+                              .filter(function (el) { return el != ''; });    // 清洗
+    console.log("download_magnet_list: ", download_magnet_list);
+
+    download_magnet_list.forEach(element => {
+      "\'" + element + "\'"
+    });
+    console.log("download_magnet_list: ", download_magnet_list);
+
+    downloadrecord = download_magnet_list.join(",");
+    console.log("downloadrecord: ", downloadrecord);
+
+    var SELECT_query = 'SELECT filename,downloadtime,uploadtime FROM qqshare_info WEHER magnetURI IN ('
+            + downloadrecord + ');';
+    connection.query(SELECT_query, function (err, results, fields) { 
+      if(err){
+        console.log('[SELECT ERROR] - ',err.message);
+        resData = {flag: 0};
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(resData));
+        return;
+      }
+
+      res.setHeader("Content-Type", "application/json");
+      console.log("----------------------------------------");
+      console.log(JSON.stringify(results));
+      res.end(JSON.stringify(results));
+    })
+  });
+
+  connection.end();
+})
+
+app.post('/api/changename', function (req, res){
+  console.log("----------------------------------------");
+  console.log('/api/changename');
+  var postData = "";
+  req.on("data", (chunk) => {
+    postData = postData + chunk;
+  });
+  req.on("end", () => {
+    postData = querystring.parse(postData);    
+  });
+
+  var id = postData.id;
+  var newname = postData.newname;
 
   var mysql      = require('mysql');
   var connection = mysql.createConnection({
@@ -89,88 +487,37 @@ app.post('/api/upload', function (req, res) {
 
   connection.connect();
 
-  var addSql = 'INSERT INTO qqshare_info (filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL) VALUES(?,?,?,?,?,?,?,?)';
-  var addSqlParams = [filename,course,teacher,downloadtime,filesize,uploadtime,fileformat,magnetURL];
+  var addSql = 'UPDATE user_info SET name=\'?\' WHERE id=\'?\';';
+  var addSqlParams = [newname,id];
 
   connection.query(addSql,addSqlParams,function (err, result) {
     if(err){
-      console.log('[INSERT ERROR] - ',err.message);
+      console.log('[UPDATE ERROR] - ',err.message);
       resData = {flag: 0};
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify(resData));
       return;
     }
-
-    console.log('--------------------------INSERT----------------------------');
-    //console.log('INSERT ID:',result.insertId);        
-    console.log('INSERT ID:',result);        
-    console.log('-----------------------------------------------------------------\n\n');
+    console.log('--------------------------UPDATE----------------------------');
+    console.log("newname:", postData.newname);
+     
     resData = {flag: 1};
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify(resData));
   });
-
-  connection.query("SELECT * FROM qqshare_info;",function (err, result) {
-    if(err){
-      console.log('[SELECT ERROR] - ',err.message);
-      return;
-    }
-
-    // console.log('--------------------------SELECT----------------------------');
-    // console.log(result);
-    // console.log('------------------------------------------------------------\n\n');  
-  });
+  
 
   connection.end();
 })
 
-app.post('/api/uservalid', function (req, res) {
-  console.log('post');
-  var postData = "";
-  req.on("data", (chunk) => {
-  postData = postData + chunk;
-  });
-  req.on("end", () => {
-  postData = querystring.parse(postData);
-  //console.log(postData);
-  console.log(postData['id'],postData['pwd']);
-  db = [[2020210942,{pwd:123456,name:'zouyansong'}],
-    [2020000000,{pwd:123456,name:'robot'}],
-    [123,{pwd:123,name:'test'}]];
-  var map = new Map(db);
-  var resData = undefined;
-  var v = map.get(Number(postData['id']));
-  if(v){
-    console.log("用户存在");
-    if (v['pwd'] === Number(postData['pwd'])){
-    console.log("密码正确");
-    resData = [{flag:1,name:v['name']}];
-    }
-    else{
-    console.log("密码错误");
-    resData = [{flag:2}];
-    }
-  }
-  else{
-    console.log("用户不存在");
-    resData = [{flag:3}];
-  }
-  res.setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(resData));
-    });
-  });
-
-  console.log("-------------");
-  
-})
-
-
-app.get('/api/test', function (req, res) {
-
+app.get('/api/test_getCurrDate', function (req, res) {
+  console.log("----------------------------------------");
+  console.log('/api/test_getCurrDate');
   console.log(getCurrDate());
   res.send(getCurrDate());
   
 })
+
 
 
 
