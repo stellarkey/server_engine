@@ -1,5 +1,5 @@
-# server_search_engine
- server_search_engine for `qqshare`.
+# server_engine
+ server_engine for [`qqshare`](https://github.com/stellarkey/qingqingshare).
 
 > MySQL pre-installation is required.
 
@@ -17,14 +17,12 @@ node server.js --port=8023
 
 ## Search
 
-`http://localhost:8011/api/search?filename=XXX&course=YYY&teacher=ZZZ`
+`http://localhost:8081/api/search?filename=XXX&course=YYY&teacher=ZZZ`
 
 - server: `http://localhost`
-- port number: `8011`
+- port number: `8081`
 - quest matcher: `/api/search`
 - quest parameters:
   - `filename=XXX`
   - `course=YYY`
   - `teacher=ZZZ`
-
-> Example URL：`http://localhost:8011/api/search?filename=%E7%BB%84%E5%90%88%E6%95%B0%E5%AD%A6&course=%E7%BB%84%E5%90%88%E6%95%B0%E5%AD%A6&teacher=%E9%A9%AC%E6%98%B1%E6%98%A5`
