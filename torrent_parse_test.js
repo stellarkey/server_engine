@@ -1,0 +1,11 @@
+const parseTorrent = require('parse-torrent')
+const fs = require('fs')
+
+console.log("----------------------------------------------------------")
+console.log("----------------------------------------------------------")
+console.log("----------------------------------------------------------")
+console.log(parseTorrent('magnet:?xt=urn:btih:d2474e86c95b19b8bcfdb92bc12c9d44667cfa36&tr=http%3A%2F%2Ftracker.example.com%2Fannounce'))
+console.log("----------------------------------------------------------")
+console.log("----------------------------------------------------------")
+console.log("----------------------------------------------------------")
+console.log(parseTorrent(fs.readFileSync(__dirname + '/example.torrent')))
