@@ -133,16 +133,24 @@ app.get('/api/search', function (req, res) {
 
   connection.connect();
 
-  var filename_filter = req.query.filename ? req.query.filename : " ";
-  var course_filter = req.query.course ? req.query.course : " ";
-  var teacher_filter = req.query.teacher ? req.query.teacher : " ";
-  // if it's empty, then use: " " (with a space)
+  var filename_filter = req.query.filename ? req.query.filename : ".";
+  var course_filter = req.query.course ? req.query.course : ".";
+  var teacher_filter = req.query.teacher ? req.query.teacher : ".";
+
+  // if it's all empty, then return an invalid search.
+  if(filename_filter == "." && course_filter == "." && teacher_filter == "."){
+    console.log('Invalid search.');
+    resData = {flag: 0};
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(resData));
+    return;
+  }
 
   var SQL_query = 'SELECT * FROM qqshare_info WHERE filename REGEXP "'
               + filename_filter 
-              + '" OR course REGEXP "' 
+              + '" AND course REGEXP "' 
               + course_filter 
-              + '" OR teacher REGEXP "'
+              + '" AND teacher REGEXP "'
               + teacher_filter
               + '";';
 
@@ -340,6 +348,7 @@ app.get('/api/uploadrecord', function (req, res){
 
     connection2.query(SQL_query2, function (err, results, fields) { 
       if(err){
+        // 如果记录为空，SELECT错误。
         console.log('[SELECT ERROR] - ',err.message);
         resData = {flag: 0};
         res.setHeader("Content-Type", "application/json");
